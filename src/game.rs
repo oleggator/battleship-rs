@@ -31,7 +31,7 @@ impl Game {
     ///
     /// Also see [`Game::is_ready`]
     pub fn add_player(&mut self, player: Player) -> Result<()> {
-        if self.players.get(0).is_none() {
+        if self.players.len() < MAX_PLAYERS {
             self.players.push(player);
             self.players[0].send("Waiting for opponent...\n")?;
         } else {
@@ -39,7 +39,7 @@ impl Game {
             for i in 0..MAX_PLAYERS {
                 let message = format!(
                     "Your opponent is {}\n",
-                    self.players[MAX_PLAYERS - (i + 1)].name
+                    self.opponent(i).name
                 );
                 self.players[i].send(&message)?;
             }
@@ -72,7 +72,7 @@ impl Game {
                     coords: vec![Coordinate {
                         x: coord.x,
                         y: coord.y,
-                        is_hit: self.players[MAX_PLAYERS - (i + 1)]
+                        is_hit: self.opponent(i)
                             .grid
                             .ships
                             .iter()
@@ -107,9 +107,9 @@ impl Game {
             for i in 0..MAX_PLAYERS {
                 // Check if the player has won.
                 if self.players[i].grid.ships.iter().all(|ship| ship.is_sunk()) {
-                    let message = format!("{} won.\n", self.players[MAX_PLAYERS - (i + 1)].name);
+                    let message = format!("{} won.\n", self.opponent(i).name);
                     self.players[i].send(&message)?;
-                    self.players[MAX_PLAYERS - (i + 1)].send("You won!\n")?;
+                    self.opponent_mut(i).send("You won!\n")?;
                     self.players.clear();
                     print!("[#] {}", message);
                     break 'game;
@@ -122,7 +122,7 @@ impl Game {
                 self.players[i].send("Your turn: ")?;
                 let message = format!("{}'s turn.\n", self.players[i].name);
                 print!("[#] {}", message);
-                self.players[MAX_PLAYERS - (i + 1)].send(&message)?;
+                self.opponent_mut(i).send(&message)?;
 
                 // Parse the grid coordinate.
                 let coordinate_str = self.players[i].read()?;
@@ -140,7 +140,7 @@ impl Game {
 
                 // Handle hit/miss.
                 self.players[i].hits.push(coordinate);
-                if let Some(coordinate) = self.players[MAX_PLAYERS - (i + 1)]
+                if let Some(coordinate) = self.opponent_mut(i)
                     .grid
                     .ships
                     .iter_mut()
@@ -154,21 +154,38 @@ impl Game {
                 }
 
                 // Inform about the game stats.
-                let message = format!(
-                    "{} has {} ships remaining.\n",
-                    self.players[MAX_PLAYERS - (i + 1)].name,
-                    self.players[MAX_PLAYERS - (i + 1)]
-                        .grid
-                        .ships
-                        .iter()
-                        .filter(|ship| !ship.is_sunk())
-                        .count()
-                );
+                let message = {
+                    let opponent = self.opponent(i);
+                    format!(
+                        "{} has {} ships remaining.\n",
+                        opponent.name,
+                        opponent
+                            .grid
+                            .ships
+                            .iter()
+                            .filter(|ship| !ship.is_sunk())
+                            .count()
+                    )
+                };
                 self.players[i].send(&message)?;
                 let message = format!("{} is firing at {}\n", self.players[i].name, coordinate);
-                self.players[MAX_PLAYERS - (i + 1)].send(&message)?;
+                self.opponent_mut(i).send(&message)?;
             }
         }
         Ok(())
+    }
+
+    fn opponent_index(&self, i: usize) -> usize {
+        (i + 1) % MAX_PLAYERS
+    }
+
+    fn opponent(&self, i: usize) -> &Player {
+        let player_index = self.opponent_index(i);
+        &self.players[player_index]
+    }
+
+    fn opponent_mut(&mut self, i: usize) -> &mut Player {
+        let player_index = self.opponent_index(i);
+        &mut self.players[player_index]
     }
 }
