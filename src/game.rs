@@ -10,7 +10,7 @@ use std::thread;
 use std::time::Duration;
 
 /// Maximum number of players.
-pub const MAX_PLAYERS: usize = 2;
+pub const MAX_PLAYERS: usize = 3;
 
 /// Representation of the Battleship game.
 ///
@@ -65,7 +65,8 @@ impl Game {
     fn show_grid(&mut self, width: u8, height: u8) -> Result<()> {
         for i in 0..MAX_PLAYERS {
             // Show upper grid (hits/misses).
-            let ships = self.players[i]
+            let ships = self.opponent(i)
+                .grid
                 .hits
                 .iter()
                 .map(|coord| Ship {
@@ -85,11 +86,13 @@ impl Game {
                 width,
                 height,
                 ships,
+                hits: vec![]
             }
             .as_string(false)?;
             self.players[i].send(&grid_str)?;
 
             // Show lower grid (ships).
+            self.players[i].send("\nYour grid:")?;
             let grid_str = self.players[i].grid.as_string(true)?;
             self.players[i].send(&grid_str)?;
         }
@@ -104,7 +107,8 @@ impl Game {
     pub fn start(&mut self, grid_width: u8, grid_height: u8) -> Result<()> {
         self.show_countdown()?;
         'game: loop {
-            for i in 0..MAX_PLAYERS {
+            let mut i = 0;
+            while i < MAX_PLAYERS {
                 // Check if the player has won.
                 if self.players[i].grid.ships.iter().all(|ship| ship.is_sunk()) {
                     let message = format!("{} won.\n", self.opponent(i).name);
@@ -119,11 +123,18 @@ impl Game {
                 self.show_grid(grid_width, grid_height)?;
 
                 // Handle the player turn.
-                self.players[i].send("Your turn: ")?;
+                {
+                    let msg = format!("Your turn to shoot {}: ", self.opponent(i).name);
+                    self.players[i].send(&msg)?;
+                }
                 let message = format!("{}'s turn.\n", self.players[i].name);
                 print!("[#] {}", message);
-                self.opponent_mut(i).send(&message)?;
-
+                for j in 0..self.players.len() {
+                    if j != i {
+                        self.players[j].send(&message)?;
+                    }
+                }
+                
                 // Parse the grid coordinate.
                 let coordinate_str = self.players[i].read()?;
                 let coordinate =
@@ -139,8 +150,8 @@ impl Game {
                     };
 
                 // Handle hit/miss.
-                self.players[i].hits.push(coordinate);
-                if let Some(coordinate) = self.opponent_mut(i)
+                self.opponent_mut(i).grid.hits.push(coordinate);
+                let is_hit = if let Some(coordinate) = self.opponent_mut(i)
                     .grid
                     .ships
                     .iter_mut()
@@ -149,9 +160,11 @@ impl Game {
                 {
                     coordinate.is_hit = true;
                     self.players[i].send("Hit!\n")?;
+                    true
                 } else {
                     self.players[i].send("Missed.\n")?;
-                }
+                    false
+                };
 
                 // Inform about the game stats.
                 let message = {
@@ -170,6 +183,10 @@ impl Game {
                 self.players[i].send(&message)?;
                 let message = format!("{} is firing at {}\n", self.players[i].name, coordinate);
                 self.opponent_mut(i).send(&message)?;
+
+                if !is_hit {
+                    i += 1;
+                }
             }
         }
         Ok(())

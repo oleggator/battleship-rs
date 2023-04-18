@@ -13,8 +13,6 @@ pub struct Player {
     pub name: String,
     /// Player's grid.
     pub grid: Grid,
-    /// Player's hits.
-    pub hits: Vec<Coordinate>,
     /// TCP connection.
     stream: TcpStream,
 }
@@ -25,7 +23,6 @@ impl Player {
         Self {
             name: String::new(),
             grid: Grid::default(),
-            hits: Vec::new(),
             stream,
         }
     }

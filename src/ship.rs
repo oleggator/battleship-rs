@@ -4,13 +4,13 @@ use crate::grid::Coordinate;
 use std::fmt;
 
 /// The character that represents a boat.
-const BOAT: &str = "△";
+const BOAT: &str = "⛵";
 /// The character that represents a part of a vertical destroyer ship.
-const DESTROYER_VERTICAL: &str = "▯";
+const DESTROYER_VERTICAL: &str = "👾";
 /// The character that represents a part of a horizontal destroyer ship.
-const DESTROYER_HORIZONTAL: &str = "▭";
+const DESTROYER_HORIZONTAL: &str = "👾";
 /// The character that represents a part of a battleship.
-const BATTLESHIP: &str = "▧";
+const BATTLESHIP: &str = "👾";
 
 /// Available orientations for the ship.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -46,18 +46,10 @@ impl fmt::Display for ShipType {
             f,
             "{}",
             match self {
-                ShipType::Boat => {
-                    BOAT
-                }
-                ShipType::Destroyer(Orientation::Vertical) => {
-                    DESTROYER_VERTICAL
-                }
-                ShipType::Destroyer(Orientation::Horizontal) => {
-                    DESTROYER_HORIZONTAL
-                }
-                ShipType::Battleship(_) => {
-                    BATTLESHIP
-                }
+                ShipType::Boat => BOAT,
+                ShipType::Destroyer(Orientation::Vertical) => DESTROYER_VERTICAL,
+                ShipType::Destroyer(Orientation::Horizontal) => DESTROYER_HORIZONTAL,
+                ShipType::Battleship(_) => BATTLESHIP
             }
         )
     }

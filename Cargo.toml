@@ -8,6 +8,7 @@ edition = "2018" # support older Rust versions
 rust-version = "1.38.0"
 
 [dependencies]
+ansi_term = "0.12.1"
 fastrand = "1.7.0"
 
 # Tweak release profile settings for faster code.

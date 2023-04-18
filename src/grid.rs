@@ -1,5 +1,7 @@
 //! Game board.
 
+use ansi_term::Style;
+
 use crate::ship::{Ship, ShipType};
 use crate::Result;
 use std::convert::TryFrom;
@@ -11,11 +13,11 @@ use std::str;
 /// Available alphabet characters for column names.
 pub const ALPHABET: &str = "abcdefghijklmnopqrstuvwxyz";
 /// The character that represents a hit.
-const HIT_POINT: &str = "☒";
+const HIT_POINT: &str = "🔥";
 /// The character that represents a miss.
-const MISSED_POINT: &str = "✕";
+const MISSED_POINT: &str = "🌀";
 /// The character to display a default coordinate.
-const DEFAULT_POINT: &str = "•";
+const DEFAULT_POINT: &str = "  ";
 
 /// Representation of coordinates on a 2-dimensional plane.
 #[derive(Clone, Copy, Default)]
@@ -97,6 +99,8 @@ pub struct Grid {
     pub height: u8,
     /// Ships on the grid.
     pub ships: Vec<Ship>,
+    /// Hits.
+    pub hits: Vec<Coordinate>,
 }
 
 impl Grid {
@@ -106,6 +110,7 @@ impl Grid {
             width,
             height,
             ships: Vec::new(),
+            hits: Vec::new(),
         }
     }
 
@@ -178,25 +183,21 @@ impl Grid {
             .iter()
             .find(|ship| ship.coords.contains(&coordinate))
         {
-            write!(
-                out,
-                "{} ",
-                if ship
-                    .coords
-                    .iter()
-                    .find(|c| *c == &coordinate)
-                    .map(|c| c.is_hit)
-                    == Some(true)
-                {
-                    HIT_POINT.to_string()
-                } else if show_ships {
-                    ship.type_.to_string()
-                } else {
-                    MISSED_POINT.to_string()
-                }
-            )?;
+            let value = if ship
+                .coords
+                .iter()
+                .find(|c| *c == &coordinate)
+                .map(|c| c.is_hit) == Some(true)
+            {
+                HIT_POINT.to_string()
+            } else if show_ships {
+                ship.type_.to_string()
+            } else {
+                MISSED_POINT.to_string()
+            };
+            write!(out, "|{}", value)?;
         } else {
-            write!(out, "{} ", DEFAULT_POINT)?;
+            write!(out, "|{}", Style::new().underline().paint(DEFAULT_POINT))?;
         }
         Ok(())
     }
@@ -207,15 +208,23 @@ impl Grid {
         writeln!(out)?;
         for h in 0..self.height + 1 {
             if h == 0 {
-                write!(out, "   ")?;
-            } else if h.to_string().len() == 2 {
-                write!(out, "{} ", h)?;
+                write!(out, "  ")?;
             } else {
-                write!(out, "{}  ", h)?;
+                write!(
+                    out,
+                    "{}",
+                    Style::new().underline().paint(format!("{:2}", h))
+                )?;
             }
             for w in 0..self.width {
                 if h == 0 {
-                    write!(out, "{} ", alphabet_chars[w as usize].to_uppercase())?;
+                    write!(
+                        out,
+                        "|{}",
+                        Style::new()
+                            .underline()
+                            .paint(format!("{} ", alphabet_chars[w as usize].to_uppercase()))
+                    )?;
                 } else {
                     self.display_point(out, Coordinate::from((w + 1, h)), show_ships)?;
                 }
