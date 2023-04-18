@@ -1,6 +1,5 @@
 //! Player.
 
-use crate::grid::Coordinate;
 use crate::grid::Grid;
 use crate::{Result, BANNER};
 use std::io::{BufRead, BufReader, Write};
@@ -15,15 +14,18 @@ pub struct Player {
     pub grid: Grid,
     /// TCP connection.
     stream: TcpStream,
+    reader: BufReader<TcpStream>,
 }
 
 impl Player {
     /// Constructs a new instance of [`Player`].
     pub fn new(stream: TcpStream) -> Self {
+        let reader = BufReader::new(stream.try_clone().unwrap());
         Self {
             name: String::new(),
             grid: Grid::default(),
             stream,
+            reader,
         }
     }
 
@@ -44,9 +46,8 @@ impl Player {
 
     /// Reads the next line from the TCP stream.
     pub fn read(&mut self) -> Result<String> {
-        let mut reader = BufReader::new(&self.stream);
         let mut line = String::new();
-        reader.read_line(&mut line)?;
+        self.reader.read_line(&mut line)?;
         Ok(line.trim().to_string())
     }
 
